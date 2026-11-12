@@ -13,8 +13,8 @@ if game.CoreGui:FindFirstChild("AimbotScriptGUI") then
     game.CoreGui.AimbotScriptGUI:Destroy()
 end
 
--- 初期設定
-_G.aimbotLoopActive = true 
+-- 初期設定 (エイムボット・ヒットボックスを最初からOFFに設定)
+_G.aimbotLoopActive = false 
 _G.SelectedTargetName = "なし"
 _G.NPCTargetingEnabled = false 
 
@@ -23,7 +23,7 @@ local targetPart = nil
 local CurrentAllies = {}
 local StealthActive = false
 
-local Hitbox_Enabled = true
+local Hitbox_Enabled = false
 local Hitbox_Size = 150
 local Hitbox_Transparency = 1
 
@@ -38,8 +38,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 460, 0, 400) 
-MainFrame.Position = UDim2.new(0.5, -230, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 360, 0, 400) -- 幅360
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -81,16 +81,7 @@ TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TitleBar
 
-local SubTitleText = Instance.new("TextLabel")
-SubTitleText.Size = UDim2.new(0, 100, 1, 0)
-SubTitleText.Position = UDim2.new(0, 135, 0, 0)
-SubTitleText.BackgroundTransparency = 1
-SubTitleText.Text = "v1.6"
-SubTitleText.TextColor3 = Color3.fromRGB(100, 100, 120)
-SubTitleText.TextSize = 11
-SubTitleText.Font = Enum.Font.GothamMedium
-SubTitleText.TextXAlignment = Enum.TextXAlignment.Left
-SubTitleText.Parent = TitleBar
+-- ※ "v1.6" の文字は削除済み
 
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, -24, 1, -60)
@@ -133,11 +124,11 @@ local IsMinimized = false
 MinimizeButton.MouseButton1Click:Connect(function()
     IsMinimized = not IsMinimized
     if IsMinimized then
-        TweenService:Create(MainFrame, TweenInfoData, {Size = UDim2.new(0, 460, 0, 45)}):Play()
+        TweenService:Create(MainFrame, TweenInfoData, {Size = UDim2.new(0, 360, 0, 45)}):Play()
         ContentFrame.Visible = false
         MinimizeButton.Text = "+"
     else
-        TweenService:Create(MainFrame, TweenInfoData, {Size = UDim2.new(0, 460, 0, 400)}):Play()
+        TweenService:Create(MainFrame, TweenInfoData, {Size = UDim2.new(0, 360, 0, 400)}):Play()
         ContentFrame.Visible = true
         MinimizeButton.Text = "−"
     end
@@ -224,10 +215,10 @@ local function CreateModernToggle(text, layoutOrder, startState, callback)
 end
 
 -- ------------------------------------------
---  3. 各コンポーネントの配置
+--  3. 各コンポーネントの配置 (初期状態をfalseに設定)
 -- ------------------------------------------
 
-CreateModernToggle("ENABLE AIMBOT[B]", 1, true, function(state) 
+CreateModernToggle("ENABLE AIMBOT[B]", 1, false, function(state) 
     _G.aimbotLoopActive = state 
 end)
 
@@ -269,8 +260,8 @@ DropdownLabel.ZIndex = 11
 DropdownLabel.Parent = DropdownContainer
 
 local SelectedLabel = Instance.new("TextLabel")
-SelectedLabel.Size = UDim2.new(0.6, 0, 1, 0)
-SelectedLabel.Position = UDim2.new(1, -264, 0, 0)
+SelectedLabel.Size = UDim2.new(0.5, 0, 1, 0)
+SelectedLabel.Position = UDim2.new(1, -170, 0, 0)
 SelectedLabel.BackgroundTransparency = 1
 SelectedLabel.Text = "Nearest"
 SelectedLabel.TextColor3 = Color3.fromRGB(0, 180, 255)
@@ -382,7 +373,7 @@ DropdownTrigger.MouseButton1Click:Connect(function()
     end
 end)
 
-CreateModernToggle("Hitbox", 3, true, function(state)
+CreateModernToggle("Hitbox", 3, false, function(state)
     Hitbox_Enabled = state
     if not state then
         for _, p in pairs(Players:GetPlayers()) do
