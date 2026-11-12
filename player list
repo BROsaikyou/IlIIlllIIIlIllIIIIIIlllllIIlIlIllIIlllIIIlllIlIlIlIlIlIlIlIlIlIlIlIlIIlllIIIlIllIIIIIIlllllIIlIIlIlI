@@ -1,0 +1,325 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 既に存在していれば削除して重複を防ぐ
+if PlayerGui:FindFirstChild("PlayerListGUI") then
+    PlayerGui.PlayerListGUI:Destroy()
+end
+
+local function CreatePvpList()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "PlayerListGUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = PlayerGui
+
+    -- メインフレーム（画面の中央に配置）
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 380, 0, 460)
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- 基準点を中央に設定
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- 画面の真ん中に配置
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 8)
+    MainCorner.Parent = MainFrame
+
+    -- ヘッダー
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 44)
+    Title.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+    Title.BorderSizePixel = 0
+    Title.Text = "  PLAYER STATUS"
+    Title.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Title.TextSize = 18
+    Title.Font = Enum.Font.GothamBold
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = MainFrame
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 8)
+    TitleCorner.Parent = Title
+
+    -- 閉じるボタン
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+    CloseBtn.Position = UDim2.new(1, -36, 0, 8)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    CloseBtn.Text = "×"
+    CloseBtn.TextSize = 20
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = MainFrame
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseBtn
+
+    CloseBtn.MouseButton1Click:Connect(function() 
+        ScreenGui:Destroy() 
+    end)
+
+    local isMinimized = false
+
+    -- 最小化ボタン (-)
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+    MinimizeBtn.Position = UDim2.new(1, -70, 0, 8)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextSize = 20
+    MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinimizeBtn.Font = Enum.Font.GothamBold
+    MinimizeBtn.Parent = MainFrame
+
+    local MinCorner = Instance.new("UICorner")
+    MinCorner.CornerRadius = UDim.new(0, 6)
+    MinCorner.Parent = MinimizeBtn
+
+    -- スクロールエリア
+    local ScrollingFrame = Instance.new("ScrollingFrame")
+    ScrollingFrame.Size = UDim2.new(1, -16, 1, -60)
+    ScrollingFrame.Position = UDim2.new(0, 8, 0, 52)
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ScrollingFrame.ScrollBarThickness = 4
+    ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
+    ScrollingFrame.BackgroundTransparency = 1
+    ScrollingFrame.Parent = MainFrame
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Padding = UDim.new(0, 6)
+    UIListLayout.Parent = ScrollingFrame
+
+    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
+    end)
+
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            MinimizeBtn.Text = "+"
+            MainFrame.Size = UDim2.new(0, 380, 0, 44)
+            ScrollingFrame.Visible = false
+        else
+            MinimizeBtn.Text = "-"
+            MainFrame.Size = UDim2.new(0, 380, 0, 460)
+            ScrollingFrame.Visible = true
+        end
+    end)
+
+    local function IsInSafeZone(targetPlayer)
+        if not (targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")) then return false end
+        local hrp = targetPlayer.Character.HumanoidRootPart
+        local safeZones = workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("SafeZones")
+        if not safeZones then return false end
+        for _, zone in ipairs(safeZones:GetChildren()) do
+            local mesh = zone:FindFirstChild("Mesh")
+            if mesh then
+                local dist = (hrp.Position - zone.Position).Magnitude
+                if dist <= (zone.Size.X * mesh.Scale.X / 2) then return true end
+            end
+        end
+        return false
+    end
+
+    local lastPositions = {}
+    local playerUIs = {}
+
+    local function CreatePlayerItem(p)
+        local item = Instance.new("Frame")
+        item.Size = UDim2.new(1, 0, 0, 84)
+        item.BorderSizePixel = 0
+        item.Parent = ScrollingFrame
+        
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 6)
+        itemCorner.Parent = item
+
+        -- アバターアイコン
+        local avatarImg = Instance.new("ImageLabel")
+        avatarImg.Size = UDim2.new(0, 40, 0, 40)
+        avatarImg.Position = UDim2.new(0, 8, 0, 8)
+        avatarImg.BackgroundTransparency = 1
+        avatarImg.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", p.UserId)
+        avatarImg.Parent = item
+        
+        local imgCorner = Instance.new("UICorner")
+        imgCorner.CornerRadius = UDim.new(1, 0)
+        imgCorner.Parent = avatarImg
+
+        -- 表示名
+        local displayNameLabel = Instance.new("TextLabel")
+        displayNameLabel.Size = UDim2.new(0.38, 0, 0, 22)
+        displayNameLabel.Position = UDim2.new(0, 54, 0, 6)
+        displayNameLabel.BackgroundTransparency = 1
+        displayNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        displayNameLabel.TextSize = 14
+        displayNameLabel.Font = Enum.Font.GothamBold
+        displayNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        displayNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        displayNameLabel.Parent = item
+
+        -- レベル表示
+        local levelLabel = Instance.new("TextLabel")
+        levelLabel.Size = UDim2.new(0.18, 0, 0, 22)
+        levelLabel.Position = UDim2.new(0.39, 54, 0, 6)
+        levelLabel.BackgroundTransparency = 1
+        levelLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+        levelLabel.TextSize = 13
+        levelLabel.Font = Enum.Font.GothamBold
+        levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+        levelLabel.Parent = item
+
+        -- ユーザー名
+        local usernameLabel = Instance.new("TextLabel")
+        usernameLabel.Size = UDim2.new(0.55, -50, 0, 18)
+        usernameLabel.Position = UDim2.new(0, 54, 0, 28)
+        usernameLabel.BackgroundTransparency = 1
+        usernameLabel.Text = "@" .. p.Name
+        usernameLabel.TextColor3 = Color3.fromRGB(210, 210, 215)
+        usernameLabel.TextSize = 12
+        usernameLabel.Font = Enum.Font.Gotham
+        usernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        usernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        usernameLabel.Parent = item
+
+        -- 座標表示
+        local coordLabel = Instance.new("TextLabel")
+        coordLabel.Size = UDim2.new(1, -16, 0, 18)
+        coordLabel.Position = UDim2.new(0, 8, 0, 50)
+        coordLabel.BackgroundTransparency = 1
+        coordLabel.TextColor3 = Color3.fromRGB(235, 245, 255)
+        coordLabel.TextSize = 13
+        coordLabel.Font = Enum.Font.GothamMedium
+        coordLabel.TextXAlignment = Enum.TextXAlignment.Left
+        coordLabel.Parent = item
+
+        -- ステータス
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(0.42, 0, 0, 42)
+        statusLabel.Position = UDim2.new(0.58, 0, 0, 6)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        statusLabel.TextSize = 12
+        statusLabel.Font = Enum.Font.GothamBold
+        statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+        statusLabel.Parent = item
+
+        -- HPバー
+        local healthBarBg = Instance.new("Frame")
+        healthBarBg.Size = UDim2.new(1, -16, 0, 5)
+        healthBarBg.Position = UDim2.new(0, 8, 1, -10)
+        healthBarBg.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+        healthBarBg.BackgroundTransparency = 0.4
+        healthBarBg.BorderSizePixel = 0
+        healthBarBg.Parent = item
+
+        local bgCorner = Instance.new("UICorner")
+        bgCorner.CornerRadius = UDim.new(1, 0)
+        bgCorner.Parent = healthBarBg
+
+        local healthBarFill = Instance.new("Frame")
+        healthBarFill.Size = UDim2.new(1, 0, 1, 0)
+        healthBarFill.BackgroundColor3 = Color3.fromRGB(60, 220, 120)
+        healthBarFill.BorderSizePixel = 0
+        healthBarFill.Parent = healthBarBg
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(1, 0)
+        fillCorner.Parent = healthBarFill
+
+        playerUIs[p] = {
+            Item = item,
+            DisplayName = displayNameLabel,
+            Level = levelLabel,
+            Coord = coordLabel,
+            Status = statusLabel,
+            Fill = healthBarFill
+        }
+    end
+
+    local function UpdateList()
+        local currentPlayers = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            currentPlayers[p] = true
+
+            if not playerUIs[p] or not playerUIs[p].Item.Parent then
+                CreatePlayerItem(p)
+            end
+
+            local ui = playerUIs[p]
+            if ui then
+                local level = p:FindFirstChild("Data") 
+                    and p.Data:FindFirstChild("Level") 
+                    and p.Data.Level.Value or "?"
+
+                ui.DisplayName.Text = p.DisplayName or p.Name
+                ui.Level.Text = string.format("(Lv.%s)", tostring(level))
+
+                local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                local posText = "X: ---   Y: ---   Z: ---"
+                local moving = false
+
+                if hrp then
+                    local pos = hrp.Position
+                    posText = string.format("X: %.0f   Y: %.0f   Z: %.0f", pos.X, pos.Y, pos.Z)
+                    
+                    local lastPos = lastPositions[p]
+                    if lastPos then
+                        moving = (pos - lastPos).Magnitude > 0.05
+                    end
+                    lastPositions[p] = pos
+                end
+                ui.Coord.Text = posText
+
+                local humanoid = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+                local health = humanoid and math.floor(humanoid.Health) or 0
+                local maxHealth = humanoid and math.floor(humanoid.MaxHealth) or 100
+                if maxHealth <= 0 then maxHealth = 100 end
+
+                local pvpDisabled = p:GetAttribute("PvpDisabled")
+                local safe = IsInSafeZone(p)
+
+                ui.Status.Text = string.format("HP: %d/%d\n[P:%s] [%s]", health, maxHealth, pvpDisabled and "OFF" or "ON", moving and "WALK" or "STOP")
+
+                local healthPercent = math.clamp(health / maxHealth, 0, 1)
+                ui.Fill.Size = UDim2.new(healthPercent, 0, 1, 0)
+
+                if pvpDisabled then
+                    ui.Item.BackgroundColor3 = Color3.fromRGB(145, 45, 45)
+                elseif safe then
+                    ui.Item.BackgroundColor3 = Color3.fromRGB(45, 80, 155)
+                else
+                    ui.Item.BackgroundColor3 = Color3.fromRGB(40, 125, 65)
+                end
+            end
+        end
+
+        for p, ui in pairs(playerUIs) do
+            if not currentPlayers[p] then
+                if ui.Item then ui.Item:Destroy() end
+                playerUIs[p] = nil
+                lastPositions[p] = nil
+            end
+        end
+    end
+
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if not ScreenGui.Parent then 
+            connection:Disconnect() 
+            return 
+        end
+        if not isMinimized then
+            UpdateList()
+        end
+    end)
+    UpdateList()
+end
+
+CreatePvpList()
