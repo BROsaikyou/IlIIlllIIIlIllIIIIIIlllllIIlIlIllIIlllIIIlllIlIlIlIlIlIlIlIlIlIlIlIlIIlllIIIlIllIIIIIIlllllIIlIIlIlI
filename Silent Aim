@@ -1,19 +1,14 @@
--- ===================================================
---  【アバターアイコン＆2段表示化】最高峰エイムボットGUI (完全修復版)
--- ===================================================
-
+-- blox fruits silent aim
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 
--- 重複防止用のGUI削除
 if game.CoreGui:FindFirstChild("AimbotScriptGUI") then
     game.CoreGui.AimbotScriptGUI:Destroy()
 end
 
--- 初期設定 (エイムボット・ヒットボックスを最初からOFFに設定)
 _G.aimbotLoopActive = false 
 _G.SelectedTargetName = "なし"
 _G.NPCTargetingEnabled = false 
@@ -26,10 +21,6 @@ local StealthActive = false
 local Hitbox_Enabled = false
 local Hitbox_Size = 150
 local Hitbox_Transparency = 1
-
--- ------------------------------------------
---  1. 基本GUI構造の作成
--- ------------------------------------------
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AimbotScriptGUI"
@@ -57,7 +48,6 @@ UIStroke.Thickness = 1
 UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 UIStroke.Parent = MainFrame
 
--- タイトルバー
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 45)
@@ -81,8 +71,6 @@ TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TitleBar
 
--- ※ "v1.6" の文字は削除済み
-
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, -24, 1, -60)
 ContentFrame.Position = UDim2.new(0, 12, 0, 52)
@@ -96,7 +84,6 @@ UIListLayout.Padding = UDim.new(0, 10)
 
 local TweenInfoData = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
--- 最小化ボタン
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Name = "MinimizeButton"
 MinimizeButton.Size = UDim2.new(0, 26, 0, 26)
@@ -134,9 +121,6 @@ MinimizeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- ------------------------------------------
---  2. トグルボタン生成関数
--- ------------------------------------------
 local function CreateModernToggle(text, layoutOrder, startState, callback)
     local ToggleContainer = Instance.new("TextButton")
     ToggleContainer.Size = UDim2.new(1, 0, 0, 48)
@@ -214,15 +198,10 @@ local function CreateModernToggle(text, layoutOrder, startState, callback)
     ToggleContainer.MouseLeave:Connect(function() TweenService:Create(ContainerStroke, TweenInfo.new(0.1), {Color = Color3.fromRGB(35, 35, 45)}):Play() end)
 end
 
--- ------------------------------------------
---  3. 各コンポーネントの配置 (初期状態をfalseに設定)
--- ------------------------------------------
-
 CreateModernToggle("ENABLE AIMBOT[B]", 1, false, function(state) 
     _G.aimbotLoopActive = state 
 end)
 
--- ターゲット選択欄
 local DropdownContainer = Instance.new("Frame")
 DropdownContainer.Size = UDim2.new(1, 0, 0, 52)
 DropdownContainer.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
@@ -477,10 +456,6 @@ CreateModernToggle("NPC MODE", 2, false, function(state)
     _G.NPCTargetingEnabled = state
 end)
 
--- ------------------------------------------
---  4. 最寄り探索＆エイムボット裏ロジック
--- ------------------------------------------
-
 local function GetClosestTarget()
     local closest = nil
     local shortestDistance = math.huge
@@ -629,9 +604,6 @@ end)
 
 SetupAimbot()
 
-----------------------------------------------------------------
--- 1. グローバルサービス・変数の共通初期定義
-----------------------------------------------------------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -946,9 +918,6 @@ task.spawn(function()
     Players.PlayerAdded:Connect(createESP)
 end)
 
-----------------------------------------------------------------
--- フルーツM1 オートアタック常時発動ロジック（プレイヤー・NPC無差別・常時最寄り狙い）
-----------------------------------------------------------------
 local AutoAttackEnabled = true 
 local Remotes = {}
 
